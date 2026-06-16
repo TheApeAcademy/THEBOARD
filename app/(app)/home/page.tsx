@@ -1,5 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
-import HomeFeed from './HomeFeed'
+import HomeFeed from '../HomeFeed'
 import type { TbPost, TbDrop } from '@/lib/types'
 
 export default async function HomePage() {

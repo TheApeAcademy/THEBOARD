@@ -12,7 +12,7 @@ export default function MobileNav({ profile }: MobileNavProps) {
   const pathname = usePathname()
 
   const items = [
-    { href: '/', icon: '⊞', label: 'Home' },
+    { href: '/home', icon: '⊞', label: 'Home' },
     { href: '/whats-poppin', icon: '🔥', label: 'Poppin' },
     { href: '/drops/new', icon: '+', label: 'Post', isPrimary: true },
     { href: '/notifications', icon: '🔔', label: 'Alerts' },
