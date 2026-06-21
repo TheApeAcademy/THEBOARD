@@ -7,19 +7,29 @@ import ComposeModal from '@/components/ComposeModal'
 
 interface HomeFeedProps {
   posts: TbPost[]
+  followingPosts: TbPost[]
   drops: TbDrop[]
   currentUserId?: string
 }
 
 type FeedTab = 'for-you' | 'following' | 'receipts'
 
-export default function HomeFeed({ posts, drops, currentUserId }: HomeFeedProps) {
+export default function HomeFeed({ posts, followingPosts, drops, currentUserId }: HomeFeedProps) {
   const [tab, setTab] = useState<FeedTab>('for-you')
   const [showCompose, setShowCompose] = useState(false)
 
-  const filteredPosts = tab === 'receipts'
-    ? posts.filter(p => p.post_type === 'receipt')
-    : posts
+  const activePosts =
+    tab === 'following'
+      ? followingPosts
+      : tab === 'receipts'
+        ? posts.filter(p => p.post_type === 'receipt')
+        : posts
+
+  const emptyMessages: Record<FeedTab, { title: string; sub: string }> = {
+    'for-you': { title: 'No posts yet', sub: 'Be the first to drop a Receipt' },
+    following: { title: 'Nothing from your Drops yet', sub: 'Tap into some Drops to see posts here' },
+    receipts: { title: 'No Receipts yet', sub: 'Be the first to drop a Receipt' },
+  }
 
   return (
     <div className="feed-page">
@@ -46,13 +56,13 @@ export default function HomeFeed({ posts, drops, currentUserId }: HomeFeedProps)
       )}
 
       <div className="feed-list">
-        {filteredPosts.length === 0 ? (
+        {activePosts.length === 0 ? (
           <div className="empty-state">
-            <p className="empty-title">No posts yet</p>
-            <p className="empty-sub">Be the first to drop a Receipt</p>
+            <p className="empty-title">{emptyMessages[tab].title}</p>
+            <p className="empty-sub">{emptyMessages[tab].sub}</p>
           </div>
         ) : (
-          filteredPosts.map(post => (
+          activePosts.map(post => (
             <PostCard key={post.id} post={post} currentUserId={currentUserId} />
           ))
         )}

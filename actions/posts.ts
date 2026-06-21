@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { PostType, SignalType, PostStatus } from '@/lib/types'
+import { fanOutStatusNotification } from './notifications'
 
 interface ActionResult<T = undefined> {
   ok: boolean
@@ -16,6 +17,7 @@ interface CreatePostInput {
   signal_type: SignalType | null
   title: string | null
   body: string
+  room_id?: string | null
 }
 
 export async function createPost(input: CreatePostInput): Promise<ActionResult<{ id: string }>> {
@@ -37,6 +39,7 @@ export async function createPost(input: CreatePostInput): Promise<ActionResult<{
       cap_count: 0,
       flame_score: 0,
       is_flame: false,
+      room_id: input.room_id ?? null,
     })
     .select('id')
     .single()
@@ -46,7 +49,7 @@ export async function createPost(input: CreatePostInput): Promise<ActionResult<{
   return { ok: true, data: { id: data.id } }
 }
 
-export async function updatePostStatus(postId: string, status: PostStatus): Promise<ActionResult> {
+export async function updatePostStatus(postId: string, status: PostStatus, note?: string): Promise<ActionResult> {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) return { ok: false, error: 'Not authenticated' }
@@ -59,13 +62,44 @@ export async function updatePostStatus(postId: string, status: PostStatus): Prom
 
   if (profile?.role !== 'company') return { ok: false, error: 'Only companies can update status' }
 
+  // Fetch current post for old status + notification context
+  const { data: post } = await supabase
+    .from('tb_posts')
+    .select('id, status, drop_id, title, body')
+    .eq('id', postId)
+    .single()
+
+  if (!post) return { ok: false, error: 'Post not found' }
+
   const { error } = await supabase
     .from('tb_posts')
-    .update({ status })
+    .update({ status, updated_at: new Date().toISOString() })
     .eq('id', postId)
 
   if (error) return { ok: false, error: error.message }
+
+  // Insert status history
+  await supabase.from('tb_post_status_history').insert({
+    post_id: postId,
+    old_status: post.status,
+    new_status: status,
+    changed_by: user.id,
+    note: note ?? null,
+  })
+
+  // Fan out notifications to all hypers
+  await fanOutStatusNotification(
+    supabase,
+    postId,
+    status,
+    post.drop_id,
+    user.id,
+    post.title,
+    post.body,
+  )
+
   revalidatePath(`/p/${postId}`)
+  revalidatePath('/dashboard')
   return { ok: true }
 }
 
