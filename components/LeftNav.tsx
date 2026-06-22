@@ -9,16 +9,19 @@ import { avatarLetter } from '@/lib/utils'
 
 interface LeftNavProps {
   profile: TbProfile | null
+  unreadCount?: number
 }
 
 const NAV_ITEMS = [
-  { href: '/home', label: 'Home', icon: '⊞' },
+  { href: '/', label: 'Home', icon: '⊞' },
   { href: '/whats-poppin', label: "What's Poppin", icon: '🔥' },
-  { href: '/notifications', label: 'Notifications', icon: '🔔' },
-  { href: '/dashboard', label: 'Dashboard', icon: '📊' },
+  { href: '/drops', label: 'Drops', icon: '🎯' },
+  { href: '/search', label: 'Search', icon: '🔍' },
+  { href: '/notifications', label: 'Notifications', icon: '🔔', showBadge: true },
+  { href: '/dashboard', label: 'Dashboard', icon: '📊', companyOnly: true },
 ]
 
-export default function LeftNav({ profile }: LeftNavProps) {
+export default function LeftNav({ profile, unreadCount = 0 }: LeftNavProps) {
   const pathname = usePathname()
   const router = useRouter()
 
@@ -32,21 +35,26 @@ export default function LeftNav({ profile }: LeftNavProps) {
   return (
     <nav className="left-nav">
       <div className="left-nav-inner">
-        <Link href="/home" className="nav-logo">
+        <Link href="/" className="nav-logo">
           <BluebirdSVG size={36} />
           <span className="nav-logo-text">The Board</span>
         </Link>
 
         <ul className="nav-list">
           {NAV_ITEMS.map(item => {
-            if (item.href === '/dashboard' && profile?.role !== 'company') return null
+            if (item.companyOnly && profile?.role !== 'company') return null
             return (
               <li key={item.href}>
                 <Link
                   href={item.href}
                   className={`nav-item ${pathname === item.href ? 'nav-item-active' : ''}`}
                 >
-                  <span className="nav-icon">{item.icon}</span>
+                  <span className="nav-icon-wrap">
+                    <span className="nav-icon">{item.icon}</span>
+                    {item.showBadge && unreadCount > 0 && (
+                      <span className="nav-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+                    )}
+                  </span>
                   <span className="nav-label">{item.label}</span>
                 </Link>
               </li>

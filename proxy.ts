@@ -1,8 +1,7 @@
 import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
-// Paths that don't require authentication (landing page + auth routes)
-const PUBLIC_PATHS = ['/', '/login', '/register', '/auth/callback']
+const PUBLIC_PATHS = ['/login', '/register', '/auth/callback']
 
 export async function proxy(request: NextRequest) {
   let supabaseResponse = NextResponse.next({ request })
@@ -28,19 +27,17 @@ export async function proxy(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
   const pathname = request.nextUrl.pathname
-  const isPublic = PUBLIC_PATHS.some(p => pathname === p || (p !== '/' && pathname.startsWith(p)))
+  const isPublic = PUBLIC_PATHS.some(p => pathname.startsWith(p))
 
-  // Redirect unauthenticated users from protected routes to login
   if (!user && !isPublic) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  // Redirect authenticated users from landing/login/register to the feed
-  if (user && (pathname === '/' || pathname === '/login' || pathname === '/register')) {
+  if (user && (pathname === '/login' || pathname === '/register')) {
     const url = request.nextUrl.clone()
-    url.pathname = '/home'
+    url.pathname = '/'
     return NextResponse.redirect(url)
   }
 

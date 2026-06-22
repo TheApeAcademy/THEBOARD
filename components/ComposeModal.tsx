@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useTransition } from 'react'
+import { useState, useTransition, useRef, useEffect } from 'react'
 import type { TbDrop, SignalType } from '@/lib/types'
 import { createPost } from '@/actions/posts'
+import { suggestDrop, searchDrops } from '@/actions/shadowDrops'
 import { useToast } from './Toast'
 import { signalLabel } from '@/lib/utils'
 
@@ -18,11 +19,54 @@ interface ComposeModalProps {
 export default function ComposeModal({ drops, defaultDropId, onClose, onSuccess }: ComposeModalProps) {
   const [postType, setPostType] = useState<'drip' | 'receipt'>('receipt')
   const [dropId, setDropId] = useState(defaultDropId ?? '')
+  const [dropSearch, setDropSearch] = useState('')
+  const [searchResults, setSearchResults] = useState<Array<{ id: string; name: string; slug: string; accent_color: string; is_claimed: boolean }>>([])
+  const [selectedDropName, setSelectedDropName] = useState(drops.find(d => d.id === defaultDropId)?.name ?? '')
+  const [showDropSearch, setShowDropSearch] = useState(!defaultDropId)
   const [signalType, setSignalType] = useState<SignalType>('wishlist')
   const [title, setTitle] = useState('')
   const [body, setBody] = useState('')
   const [isPending, startTransition] = useTransition()
+  const [isSuggesting, startSuggestTransition] = useTransition()
   const { toast } = useToast()
+  const searchRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  useEffect(() => {
+    if (!dropSearch.trim()) {
+      setSearchResults(drops.slice(0, 8).map(d => ({ id: d.id, name: d.name, slug: d.slug, accent_color: d.accent_color, is_claimed: d.is_claimed })))
+      return
+    }
+    if (searchRef.current) clearTimeout(searchRef.current)
+    searchRef.current = setTimeout(async () => {
+      const result = await searchDrops(dropSearch)
+      if (result.ok) setSearchResults(result.data ?? [])
+    }, 300)
+    return () => { if (searchRef.current) clearTimeout(searchRef.current) }
+  }, [dropSearch, drops])
+
+  function selectDrop(drop: { id: string; name: string }) {
+    setDropId(drop.id)
+    setSelectedDropName(drop.name)
+    setShowDropSearch(false)
+    setDropSearch('')
+  }
+
+  function handleSuggest() {
+    if (!dropSearch.trim()) return
+    startSuggestTransition(async () => {
+      const result = await suggestDrop(dropSearch.trim())
+      if (result.ok && result.data) {
+        toast(result.data.isNew ? `Created Drop for ${dropSearch}` : `Found existing Drop`, 'success')
+        // Reload to get the new drop — simplest approach
+        setDropSearch('')
+        setDropId('')
+        setSelectedDropName(dropSearch.trim())
+        toast('Company added! You can now post to them.', 'info')
+      } else {
+        toast(result.error ?? 'Failed', 'error')
+      }
+    })
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
@@ -46,6 +90,8 @@ export default function ComposeModal({ drops, defaultDropId, onClose, onSuccess 
       }
     })
   }
+
+  const noExactMatch = dropSearch.trim() && searchResults.length === 0
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && onClose()}>
@@ -77,17 +123,49 @@ export default function ComposeModal({ drops, defaultDropId, onClose, onSuccess 
 
           <div className="form-group">
             <label className="form-label">Drop</label>
-            <select
-              className="form-select"
-              value={dropId}
-              onChange={e => setDropId(e.target.value)}
-              required
-            >
-              <option value="">Select a Drop</option>
-              {drops.map(d => (
-                <option key={d.id} value={d.id}>{d.name}</option>
-              ))}
-            </select>
+            {!showDropSearch && dropId ? (
+              <div className="selected-drop" onClick={() => setShowDropSearch(true)}>
+                <span className="selected-drop-name">{selectedDropName}</span>
+                <button type="button" className="selected-drop-change">Change</button>
+              </div>
+            ) : (
+              <div className="drop-search-wrap">
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Search for a company…"
+                  value={dropSearch}
+                  onChange={e => setDropSearch(e.target.value)}
+                  autoFocus={showDropSearch}
+                />
+                {searchResults.length > 0 && (
+                  <ul className="drop-search-results">
+                    {searchResults.map(d => (
+                      <li key={d.id} className="drop-result-item" onClick={() => selectDrop(d)}>
+                        <div className="drop-result-accent" style={{ backgroundColor: d.accent_color }} />
+                        <span>{d.name}</span>
+                        {!d.is_claimed && <span className="unclaimed-tag">Unclaimed</span>}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {noExactMatch && (
+                  <div className="suggest-company">
+                    <p className="suggest-text">
+                      &ldquo;{dropSearch}&rdquo; isn&apos;t on The Board yet.
+                    </p>
+                    <button
+                      type="button"
+                      className="btn-secondary btn-sm"
+                      onClick={handleSuggest}
+                      disabled={isSuggesting}
+                    >
+                      {isSuggesting ? 'Adding…' : `+ Suggest ${dropSearch}`}
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {postType === 'receipt' && (
@@ -140,7 +218,7 @@ export default function ComposeModal({ drops, defaultDropId, onClose, onSuccess 
             <button type="button" className="btn-secondary" onClick={onClose}>
               Cancel
             </button>
-            <button type="submit" className="btn-primary" disabled={isPending}>
+            <button type="submit" className="btn-primary" disabled={isPending || !dropId}>
               {isPending ? 'Posting…' : 'Drop It'}
             </button>
           </div>

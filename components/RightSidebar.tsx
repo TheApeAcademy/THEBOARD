@@ -1,4 +1,8 @@
+'use client'
+
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
+import { useState } from 'react'
 import type { TbPost, TbDrop } from '@/lib/types'
 import { formatCount } from '@/lib/utils'
 import SignalBadge from './SignalBadge'
@@ -9,15 +13,25 @@ interface RightSidebarProps {
 }
 
 export default function RightSidebar({ trendingPosts = [], suggestedDrops = [] }: RightSidebarProps) {
+  const router = useRouter()
+  const [query, setQuery] = useState('')
+
+  function handleSearch(e: React.FormEvent) {
+    e.preventDefault()
+    if (query.trim()) router.push(`/search?q=${encodeURIComponent(query.trim())}`)
+  }
+
   return (
     <aside className="right-sidebar">
-      <div className="sidebar-search">
+      <form className="sidebar-search" onSubmit={handleSearch}>
         <input
           type="search"
           className="search-input"
           placeholder="Search The Board"
+          value={query}
+          onChange={e => setQuery(e.target.value)}
         />
-      </div>
+      </form>
 
       {trendingPosts.length > 0 && (
         <div className="sidebar-widget">
