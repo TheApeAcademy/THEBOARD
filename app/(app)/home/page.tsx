@@ -42,5 +42,28 @@ export default async function HomePage() {
     }
   }
 
-  return <HomeFeed posts={posts} drops={drops} currentUserId={user?.id} />
+  // Fetch posts from tapped-in drops for the Following tab
+  let followingPosts: TbPost[] = []
+  if (user) {
+    const { data: tapIns } = await supabase
+      .from('tb_tap_ins')
+      .select('drop_id')
+      .eq('user_id', user.id)
+    const dropIds = (tapIns ?? []).map((t: { drop_id: string }) => t.drop_id)
+    if (dropIds.length > 0) {
+      const { data: fp } = await supabase
+        .from('tb_posts')
+        .select(`
+          *,
+          author:tb_profiles(id, username, display_name, avatar_url, hype_score),
+          drop:tb_drops(id, name, slug, accent_color)
+        `)
+        .in('drop_id', dropIds)
+        .order('created_at', { ascending: false })
+        .limit(30)
+      followingPosts = (fp ?? []) as unknown as TbPost[]
+    }
+  }
+
+  return <HomeFeed posts={posts} followingPosts={followingPosts} drops={drops} currentUserId={user?.id} />
 }
