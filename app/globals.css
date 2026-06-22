@@ -2504,3 +2504,87 @@ body {
 .room-name { font-size: 0.95rem; font-weight: 600; }
 .room-description { font-size: 0.8rem; color: var(--muted); }
 
+/* ── SITE-WIDE VIDEO BACKGROUND ── */
+.site-bg-video {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  object-fit: cover;
+  opacity: 0.12;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* ── HERO IMAGE (landing right panel) ── */
+.hero-visual-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  border-radius: 16px;
+  border: 1px solid rgba(255,255,255,0.08);
+  display: block;
+  box-shadow: 0 0 80px rgba(0,0,0,0.6);
+}
+
+/* ── AUTH SPLIT PANEL ── */
+.auth-panel-image {
+  flex: 1;
+  display: none;
+  position: relative;
+  overflow: hidden;
+}
+@media (min-width: 900px) {
+  .auth-page { display: flex; align-items: stretch; }
+  .auth-panel-image { display: block; }
+  .auth-card-wrap {
+    flex: 0 0 480px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 24px;
+  }
+  .auth-card { width: 100%; max-width: 400px; }
+}
+.auth-panel-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.auth-panel-image-overlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, rgba(0,0,0,0.5) 0%, rgba(0,20,60,0.4) 100%);
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: 48px;
+}
+.auth-panel-image-quote {
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1.3;
+  color: #fff;
+  letter-spacing: -0.02em;
+}
+.auth-panel-image-sub {
+  margin-top: 8px;
+  font-size: 0.9rem;
+  color: rgba(255,255,255,0.6);
+}
+
+/* ── FOR-WHO IMAGE ── */
+.for-who-img-row {
+  margin-top: 48px;
+  border-radius: 20px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,0.08);
+  max-height: 400px;
+  box-shadow: 0 0 60px rgba(0,0,0,0.5);
+}
+.for-who-img-row img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}

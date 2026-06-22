@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useTransition } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import BluebirdSVG from '@/components/BluebirdSVG'
@@ -34,6 +35,19 @@ export default function LoginPage() {
 
   return (
     <div className="auth-page">
+      <div className="auth-panel-image">
+        <Image
+          src="/601f6aba8b93dd4e41e8cc8a3bdfbfd0.jpg"
+          alt="The Board"
+          fill
+          style={{ objectFit: 'cover' }}
+        />
+        <div className="auth-panel-image-overlay">
+          <p className="auth-panel-image-quote">Where user signals become product decisions.</p>
+          <p className="auth-panel-image-sub">Real time. In public. No cap.</p>
+        </div>
+      </div>
+      <div className="auth-card-wrap">
       <div className="auth-card">
         <div className="auth-logo">
           <BluebirdSVG size={48} />
@@ -78,6 +92,7 @@ export default function LoginPage() {
           Don&apos;t have an account?{' '}
           <Link href="/register" className="auth-link">Create one</Link>
         </p>
+      </div>
       </div>
     </div>
   )
