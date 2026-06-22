@@ -43,24 +43,28 @@ function RegisterFlow() {
     e.preventDefault()
     setError('')
     startTransition(async () => {
-      const supabase = createClient()
-      const { error } = await supabase.auth.signUp({
-        email: userEmail,
-        password: userPassword,
-        options: {
-          data: {
-            role: 'user',
-            username,
-            display_name: displayName,
+      try {
+        const supabase = createClient()
+        const { error } = await supabase.auth.signUp({
+          email: userEmail,
+          password: userPassword,
+          options: {
+            data: {
+              role: 'user',
+              username,
+              display_name: displayName,
+            },
+            emailRedirectTo: `${window.location.origin}/auth/callback?next=/home`,
           },
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=/home`,
-        },
-      })
-      if (error) {
-        setError(error.message)
-      } else {
-        setSuccessEmail(userEmail)
-        setStep('success')
+        })
+        if (error) {
+          setError(error.message || 'Sign up failed. Check your details and try again.')
+        } else {
+          setSuccessEmail(userEmail)
+          setStep('success')
+        }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'An unexpected error occurred. Please try again.')
       }
     })
   }
@@ -69,6 +73,7 @@ function RegisterFlow() {
     e.preventDefault()
     setError('')
     startTransition(async () => {
+      try {
       const supabase = createClient()
       const { error } = await supabase.auth.signUp({
         email: workEmail,
@@ -87,10 +92,13 @@ function RegisterFlow() {
         },
       })
       if (error) {
-        setError(error.message)
+        setError(error.message || 'Sign up failed. Check your details and try again.')
       } else {
         setSuccessEmail(workEmail)
         setStep('success')
+      }
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'An unexpected error occurred. Please try again.')
       }
     })
   }
