@@ -10,11 +10,16 @@ import { updatePostStatus } from '@/actions/posts'
 import { useToast } from '@/components/Toast'
 import { formatCount } from '@/lib/utils'
 
+type Contributor = { username: string; display_name: string | null; avatar_url: string | null; total_hype: number; post_count: number }
+type VelocityPoint = { label: string; receipts: number; hype: number }
+
 interface DashboardProps {
   profile: TbProfile
   drops: TbDrop[]
   receipts: TbPost[]
   currentUserId: string
+  velocityData?: VelocityPoint[]
+  contributors?: Contributor[]
 }
 
 const SIGNAL_FILTERS: (SignalType | 'all')[] = ['all', 'wishlist', 'glitch', 'no_cap', 'big_brain']
@@ -125,7 +130,67 @@ function StatusFunnel({ receipts }: { receipts: TbPost[] }) {
   )
 }
 
-export default function Dashboard({ profile, drops, receipts, currentUserId }: DashboardProps) {
+function TopContributors({ contributors }: { contributors: Contributor[] }) {
+  if (contributors.length === 0) return <div className="chart-empty">No data yet</div>
+  return (
+    <div className="top-contributors">
+      {contributors.map((c, i) => (
+        <div key={c.username} className="contributor-row">
+          <span className="contributor-rank">#{i + 1}</span>
+          <div className="contributor-avatar">
+            {c.avatar_url
+              ? <img src={c.avatar_url} alt={c.display_name ?? c.username} />
+              : <span>{(c.display_name ?? c.username).charAt(0).toUpperCase()}</span>
+            }
+          </div>
+          <div className="contributor-info">
+            <span className="contributor-name">{c.display_name ?? c.username}</span>
+            <span className="contributor-username">@{c.username}</span>
+          </div>
+          <div className="contributor-stats">
+            <span className="contributor-hype">⬆ {formatCount(c.total_hype)}</span>
+            <span className="contributor-posts">{c.post_count} posts</span>
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function VelocityChart({ data, color, valueKey }: { data: VelocityPoint[]; color: string; valueKey: 'receipts' | 'hype' }) {
+  const values = data.map(d => d[valueKey])
+  const max = Math.max(...values, 1)
+  const w = 240; const h = 60
+  const pts = values.map((v, i) => {
+    const x = (i / (values.length - 1 || 1)) * w
+    const y = h - (v / max) * (h - 8)
+    return `${x},${y}`
+  }).join(' ')
+  return (
+    <div className="velocity-chart">
+      <svg viewBox={`0 0 ${w} ${h}`} className="velocity-svg" aria-hidden>
+        <defs>
+          <linearGradient id={`grad-${valueKey}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity="0.3" />
+            <stop offset="100%" stopColor={color} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <polygon
+          points={`0,${h} ${pts} ${w},${h}`}
+          fill={`url(#grad-${valueKey})`}
+        />
+        <polyline points={pts} fill="none" stroke={color} strokeWidth="2" strokeLinejoin="round" />
+      </svg>
+      <div className="velocity-labels">
+        {data.map(d => (
+          <span key={d.label} className="velocity-label">{d.label}</span>
+        ))}
+      </div>
+    </div>
+  )
+}
+
+export default function Dashboard({ profile, drops, receipts, currentUserId, velocityData = [], contributors = [] }: DashboardProps) {
   const [selectedDrop, setSelectedDrop] = useState<string>('all')
   const [signalFilter, setSignalFilter] = useState<SignalType | 'all'>('all')
   const [updatingPost, setUpdatingPost] = useState<string | null>(null)
@@ -197,7 +262,7 @@ export default function Dashboard({ profile, drops, receipts, currentUserId }: D
 
     const userMsg = dayeInput.trim()
     setDayeInput('')
-    setDayeMessages(m => [...m, { role: 'user', content: userMsg }])
+    setDayeMessages(m => [...m, { role: 'user', content: userMsg }, { role: 'assistant', content: '' }])
     setDayeLoading(true)
 
     try {
@@ -206,10 +271,26 @@ export default function Dashboard({ profile, drops, receipts, currentUserId }: D
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ question: userMsg, drop_id: dropId }),
       })
-      const json = await res.json()
-      setDayeMessages(m => [...m, { role: 'assistant', content: json.answer ?? 'No response' }])
+      if (!res.ok || !res.body) throw new Error('Bad response')
+
+      const reader = res.body.getReader()
+      const decoder = new TextDecoder()
+      while (true) {
+        const { done, value } = await reader.read()
+        if (done) break
+        const chunk = decoder.decode(value, { stream: true })
+        setDayeMessages(m => {
+          const updated = [...m]
+          updated[updated.length - 1] = { role: 'assistant', content: updated[updated.length - 1].content + chunk }
+          return updated
+        })
+      }
     } catch {
-      setDayeMessages(m => [...m, { role: 'assistant', content: 'Something went wrong. Try again.' }])
+      setDayeMessages(m => {
+        const updated = [...m]
+        updated[updated.length - 1] = { role: 'assistant', content: 'Something went wrong. Try again.' }
+        return updated
+      })
     } finally {
       setDayeLoading(false)
     }
@@ -400,22 +481,41 @@ export default function Dashboard({ profile, drops, receipts, currentUserId }: D
             </div>
           </div>
 
-          <div className="analytics-card analytics-card-full">
-            <h3 className="analytics-card-title">Top Receipts</h3>
-            <div className="top-receipts-list">
-              {receipts.slice(0, 5).map((r, i) => (
-                <Link key={r.id} href={`/p/${r.id}`} className="top-receipt-item">
-                  <span className="top-receipt-rank">#{i + 1}</span>
-                  <div className="top-receipt-info">
-                    {r.signal_type && <SignalBadge type={r.signal_type} />}
-                    <span className="top-receipt-body">{r.title ?? r.body.slice(0, 80)}</span>
-                  </div>
-                  <div className="top-receipt-stats">
-                    <MiniSparkline values={[r.hype_count]} color="#1D9BF0" />
-                    <span>{formatCount(r.hype_count)} hype</span>
-                  </div>
-                </Link>
-              ))}
+          {velocityData.length > 0 && (
+            <div className="analytics-grid">
+              <div className="analytics-card">
+                <h3 className="analytics-card-title">Receipt Velocity (7d)</h3>
+                <VelocityChart data={velocityData} color="#1D9BF0" valueKey="receipts" />
+              </div>
+              <div className="analytics-card">
+                <h3 className="analytics-card-title">Hype Velocity (7d)</h3>
+                <VelocityChart data={velocityData} color="#00BA7C" valueKey="hype" />
+              </div>
+            </div>
+          )}
+
+          <div className="analytics-grid">
+            <div className="analytics-card analytics-card-full">
+              <h3 className="analytics-card-title">Top Receipts</h3>
+              <div className="top-receipts-list">
+                {receipts.slice(0, 5).map((r, i) => (
+                  <Link key={r.id} href={`/p/${r.id}`} className="top-receipt-item">
+                    <span className="top-receipt-rank">#{i + 1}</span>
+                    <div className="top-receipt-info">
+                      {r.signal_type && <SignalBadge type={r.signal_type} />}
+                      <span className="top-receipt-body">{r.title ?? r.body.slice(0, 80)}</span>
+                    </div>
+                    <div className="top-receipt-stats">
+                      <span>{formatCount(r.hype_count)} hype</span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            <div className="analytics-card analytics-card-full">
+              <h3 className="analytics-card-title">Top Contributors</h3>
+              <TopContributors contributors={contributors} />
             </div>
           </div>
 

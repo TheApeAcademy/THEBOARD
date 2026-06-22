@@ -252,6 +252,56 @@ async function main() {
 
   console.log(`Created ${voteCount} votes`)
 
+  // Guarantee 3 Going Flame posts with explicit high flame scores
+  console.log('Creating Going Flame posts...')
+  const FLAME_POSTS = [
+    {
+      title: 'Dark mode is 2 years overdue — this is embarrassing',
+      body: "I've been asking for dark mode since 2022. Competitors shipped it in a week. The Board is the only place I can actually hold you accountable publicly. 400+ people agree with me.",
+      signal: 'wishlist' as const,
+      hype: 412,
+    },
+    {
+      title: 'You charged me twice for the same month and support ignored me',
+      body: "Double charged in November. Filed 3 support tickets. Zero responses in 2 weeks. I had to dispute via my bank. This is a billing system failure AND a support failure. Fix both.",
+      signal: 'glitch' as const,
+      hype: 389,
+    },
+    {
+      title: 'The new onboarding flow converts 3x better — here is why',
+      body: "I was skeptical of the redesign but the numbers don't lie. Our team went from 40% onboarding completion to 82% after the update shipped. The single-step email capture alone made the difference. Big brain move.",
+      signal: 'big_brain' as const,
+      hype: 356,
+    },
+  ]
+
+  const flameDropId = rand(dropIds)
+  const flameAuthorId = rand(userIds)
+  const flamePosts: string[] = []
+
+  for (const fp of FLAME_POSTS) {
+    const flameScore = fp.hype * 0.8 + 50
+    const { data: post } = await supabase
+      .from('tb_posts')
+      .insert({
+        drop_id: flameDropId,
+        author_id: flameAuthorId,
+        post_type: 'receipt',
+        signal_type: fp.signal,
+        title: fp.title,
+        body: fp.body,
+        status: 'seen',
+        hype_count: fp.hype,
+        cap_count: randInt(5, 30),
+        flame_score: flameScore,
+        is_flame: true,
+      })
+      .select('id')
+      .single()
+
+    if (post) { postIds.push(post.id); flamePosts.push(post.id) }
+  }
+
   // Status history for some posts
   console.log('Creating status history...')
   const nonOpenPosts = await supabase
@@ -277,11 +327,62 @@ async function main() {
     }
   }
 
+  // Official company responses on top receipts
+  console.log('Creating official company responses...')
+  const topPosts = await supabase
+    .from('tb_posts')
+    .select('id, drop_id, title, body')
+    .eq('post_type', 'receipt')
+    .order('hype_count', { ascending: false })
+    .limit(30)
+
+  const OFFICIAL_RESPONSES = [
+    "Thanks for the detailed feedback. This is on our radar and we're actively discussing it internally.",
+    "We hear you. This is tracked on our internal roadmap and we'll share an update within 30 days.",
+    "This is a great point — we've been seeing this pattern across multiple receipts. Prioritizing a fix.",
+    "Appreciate the kind words! The team worked hard on this and it's great to hear it's making a difference.",
+    "We're sorry to hear about this experience. Our eng team is investigating — we'll post an update here.",
+  ]
+
+  let commentCount = 0
+  if (topPosts.data) {
+    for (const post of topPosts.data.slice(0, 30)) {
+      if (Math.random() > 0.4) continue // ~60% response rate
+      const dropEntry = Object.entries(dropMap).find(([, id]) => id === post.drop_id)
+      if (!dropEntry) continue
+      const companyProfile = companyProfiles[COMPANIES.findIndex(c => c.slug === dropEntry[0])]
+      if (!companyProfile) continue
+
+      const { error } = await supabase.from('tb_comments').insert({
+        post_id: post.id,
+        author_id: companyProfile.id,
+        body: rand(OFFICIAL_RESPONSES),
+        is_official: true,
+      })
+
+      if (!error) commentCount++
+    }
+  }
+
+  // Company responses on the guaranteed flame posts
+  const stripeProfile = companyProfiles[0]
+  for (const flamePostId of flamePosts.slice(0, 2)) {
+    if (!stripeProfile) continue
+    await supabase.from('tb_comments').insert({
+      post_id: flamePostId,
+      author_id: stripeProfile.id,
+      body: "We're taking this seriously. Our team has reviewed this thread and is acting on it this sprint.",
+      is_official: true,
+    })
+    commentCount++
+  }
+
   console.log('✅ Seed complete!')
   console.log(`  • ${COMPANIES.length} Drops`)
   console.log(`  • ${userIds.length} Users`)
-  console.log(`  • ${postIds.length} Posts`)
+  console.log(`  • ${postIds.length} Posts (incl. ${flamePosts.length} Going Flame)`)
   console.log(`  • ${voteCount} Votes`)
+  console.log(`  • ${commentCount} Official company responses`)
 }
 
 main().catch(console.error)

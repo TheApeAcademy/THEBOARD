@@ -19,25 +19,58 @@ export default function EmbedWidget({ drop, topPosts, userId }: EmbedWidgetProps
   const [sent, setSent] = useState(false)
   const [isPending, startTransition] = useTransition()
   const [error, setError] = useState('')
+  // Guest flow
+  const [guestEmail, setGuestEmail] = useState('')
+  const [guestEmailSubmitted, setGuestEmailSubmitted] = useState(false)
+
+  function handleGuestEmailSubmit(e: React.FormEvent) {
+    e.preventDefault()
+    if (!guestEmail.trim() || !guestEmail.includes('@')) {
+      setError('Enter a valid email address')
+      return
+    }
+    setError('')
+    setGuestEmailSubmitted(true)
+  }
 
   function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!body.trim()) return
-    if (!userId) { setError('Sign in to post feedback'); return }
+
+    if (!userId && !guestEmailSubmitted) {
+      setError('Please enter your email first')
+      return
+    }
 
     startTransition(async () => {
-      const result = await createPost({
-        drop_id: drop.id,
-        post_type: 'receipt',
-        signal_type: signal,
-        title: null,
-        body: body.trim(),
-      })
-      if (result.ok) {
-        setSent(true)
-        setBody('')
+      if (userId) {
+        const result = await createPost({
+          drop_id: drop.id,
+          post_type: 'receipt',
+          signal_type: signal,
+          title: null,
+          body: body.trim(),
+        })
+        if (result.ok) {
+          setSent(true)
+          setBody('')
+        } else {
+          setError(result.error ?? 'Failed to post')
+        }
       } else {
-        setError(result.error ?? 'Failed to post')
+        // Guest: submit to widget API which stores the email + feedback
+        const res = await fetch('/api/widget/guest', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ drop_id: drop.id, email: guestEmail, body: body.trim(), signal_type: signal }),
+        })
+        if (res.ok) {
+          setSent(true)
+          setBody('')
+        } else {
+          const json = await res.json().catch(() => ({}))
+          setError(json.error ?? 'Failed to send')
+        }
       }
     })
   }
@@ -69,8 +102,35 @@ export default function EmbedWidget({ drop, topPosts, userId }: EmbedWidgetProps
           <p>✓ Feedback sent to {drop.name}!</p>
           <button className="embed-reset" onClick={() => setSent(false)}>Send another</button>
         </div>
+      ) : !userId && !guestEmailSubmitted ? (
+        <form onSubmit={handleGuestEmailSubmit} className="embed-form">
+          <p className="embed-guest-prompt">Enter your email to drop feedback anonymously</p>
+          <input
+            type="email"
+            className="embed-email-input"
+            placeholder="your@email.com"
+            value={guestEmail}
+            onChange={e => setGuestEmail(e.target.value)}
+            required
+          />
+          {error && <p className="embed-error">{error}</p>}
+          <button
+            type="submit"
+            className="embed-submit"
+            style={{ backgroundColor: drop.accent_color }}
+            disabled={!guestEmail.trim()}
+          >
+            Continue
+          </button>
+        </form>
       ) : (
         <form onSubmit={handleSubmit} className="embed-form">
+          {!userId && (
+            <p className="embed-guest-label">
+              Sending as <strong>{guestEmail}</strong>
+              <button type="button" className="embed-change-email" onClick={() => setGuestEmailSubmitted(false)}>change</button>
+            </p>
+          )}
           <div className="embed-signal-row">
             {SIGNAL_TYPES.map(s => (
               <button
@@ -100,7 +160,7 @@ export default function EmbedWidget({ drop, topPosts, userId }: EmbedWidgetProps
             style={{ backgroundColor: drop.accent_color }}
             disabled={isPending || !body.trim()}
           >
-            {isPending ? 'Sending…' : userId ? 'Send Feedback' : 'Sign in to send'}
+            {isPending ? 'Sending…' : 'Send Feedback'}
           </button>
         </form>
       )}

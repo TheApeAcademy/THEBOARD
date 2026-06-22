@@ -1,16 +1,13 @@
 import { createClient } from '@/lib/supabase/server'
-import { NextResponse } from 'next/server'
 import Anthropic from '@anthropic-ai/sdk'
-
-const anthropic = new Anthropic()
 
 export async function POST(request: Request) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
-  if (!user) return NextResponse.json({ error: 'Not authenticated' }, { status: 401 })
+  if (!user) return Response.json({ error: 'Not authenticated' }, { status: 401 })
 
   const { question, drop_id } = await request.json() as { question: string; drop_id: string }
-  if (!question || !drop_id) return NextResponse.json({ error: 'Missing question or drop_id' }, { status: 400 })
+  if (!question || !drop_id) return Response.json({ error: 'Missing question or drop_id' }, { status: 400 })
 
   // Verify user owns this drop
   const { data: drop } = await supabase
@@ -20,7 +17,7 @@ export async function POST(request: Request) {
     .eq('profile_id', user.id)
     .single()
 
-  if (!drop) return NextResponse.json({ error: 'Drop not found' }, { status: 404 })
+  if (!drop) return Response.json({ error: 'Drop not found' }, { status: 404 })
 
   // Gather signal context
   const [receiptsResult, statsResult] = await Promise.all([
@@ -67,7 +64,9 @@ ${receipts.slice(0, 10).map((r, i) =>
 ).join('\n')}
 `
 
-  const response = await anthropic.messages.create({
+  const anthropic = new Anthropic()
+
+  const stream = await anthropic.messages.stream({
     model: 'claude-sonnet-4-6',
     max_tokens: 600,
     system: `You are Daye, an AI product intelligence co-pilot for The Board platform. You help product teams understand their user feedback signals and decide what to build next. Be concise, direct, and actionable. Use bullet points when listing recommendations. Reference specific receipts when relevant.`,
@@ -79,6 +78,19 @@ ${receipts.slice(0, 10).map((r, i) =>
     ],
   })
 
-  const answer = response.content[0].type === 'text' ? response.content[0].text : 'No response'
-  return NextResponse.json({ answer })
+  const readable = new ReadableStream({
+    async start(controller) {
+      const encoder = new TextEncoder()
+      for await (const chunk of stream) {
+        if (chunk.type === 'content_block_delta' && chunk.delta.type === 'text_delta') {
+          controller.enqueue(encoder.encode(chunk.delta.text))
+        }
+      }
+      controller.close()
+    },
+  })
+
+  return new Response(readable, {
+    headers: { 'Content-Type': 'text/plain; charset=utf-8', 'X-Content-Type-Options': 'nosniff' },
+  })
 }
