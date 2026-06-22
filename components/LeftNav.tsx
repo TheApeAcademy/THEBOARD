@@ -12,7 +12,7 @@ interface LeftNavProps {
 }
 
 const NAV_ITEMS = [
-  { href: '/', label: 'Home', icon: '⊞' },
+  { href: '/home', label: 'Home', icon: '⊞' },
   { href: '/whats-poppin', label: "What's Poppin", icon: '🔥' },
   { href: '/notifications', label: 'Notifications', icon: '🔔' },
   { href: '/dashboard', label: 'Dashboard', icon: '📊' },
@@ -32,7 +32,7 @@ export default function LeftNav({ profile }: LeftNavProps) {
   return (
     <nav className="left-nav">
       <div className="left-nav-inner">
-        <Link href="/" className="nav-logo">
+        <Link href="/home" className="nav-logo">
           <BluebirdSVG size={36} />
           <span className="nav-logo-text">The Board</span>
         </Link>
