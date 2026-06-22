@@ -15,6 +15,7 @@ interface LeftNavProps {
 const NAV_ITEMS = [
   { href: '/', label: 'Home', icon: '⊞' },
   { href: '/whats-poppin', label: "What's Poppin", icon: '🔥' },
+  { href: '/drops', label: 'Drops', icon: '🎯' },
   { href: '/search', label: 'Search', icon: '🔍' },
   { href: '/notifications', label: 'Notifications', icon: '🔔', showBadge: true },
   { href: '/dashboard', label: 'Dashboard', icon: '📊', companyOnly: true },

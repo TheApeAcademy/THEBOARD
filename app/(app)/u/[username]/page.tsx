@@ -47,12 +47,24 @@ export default async function UserProfilePage({ params }: Props) {
 
   const isOwnProfile = user?.id === profile.id
 
+  let isFollowing = false
+  if (user && !isOwnProfile) {
+    const { data: followRow } = await supabase
+      .from('tb_followers')
+      .select('id')
+      .eq('follower_id', user.id)
+      .eq('following_id', profile.id)
+      .single()
+    isFollowing = !!followRow
+  }
+
   return (
     <UserProfile
       profile={profile as TbProfile}
       posts={userPosts}
       currentUserId={user?.id}
       isOwnProfile={isOwnProfile}
+      isFollowing={isFollowing}
     />
   )
 }

@@ -4,6 +4,7 @@ import { useState, useTransition } from 'react'
 import type { TbPost, TbProfile } from '@/lib/types'
 import PostCard from '@/components/PostCard'
 import { updateProfile } from '@/actions/profiles'
+import { followUser } from '@/actions/follows'
 import { useToast } from '@/components/Toast'
 import { avatarLetter, formatCount } from '@/lib/utils'
 
@@ -12,14 +13,32 @@ interface UserProfileProps {
   posts: TbPost[]
   currentUserId?: string
   isOwnProfile: boolean
+  isFollowing?: boolean
 }
 
-export default function UserProfile({ profile, posts, currentUserId, isOwnProfile }: UserProfileProps) {
+export default function UserProfile({ profile, posts, currentUserId, isOwnProfile, isFollowing: initialFollowing = false }: UserProfileProps) {
   const [editing, setEditing] = useState(false)
   const [displayName, setDisplayName] = useState(profile.display_name ?? '')
   const [bio, setBio] = useState(profile.bio ?? '')
+  const [following, setFollowing] = useState(initialFollowing)
+  const [followerCount, setFollowerCount] = useState(profile.follower_count)
   const [isPending, startTransition] = useTransition()
+  const [isFollowPending, startFollowTransition] = useTransition()
   const { toast } = useToast()
+
+  function handleFollow() {
+    startFollowTransition(async () => {
+      const prev = following
+      setFollowing(!following)
+      setFollowerCount(c => following ? Math.max(0, c - 1) : c + 1)
+      const result = await followUser(profile.id)
+      if (!result.ok) {
+        setFollowing(prev)
+        setFollowerCount(c => following ? c + 1 : Math.max(0, c - 1))
+        toast(result.error ?? 'Failed', 'error')
+      }
+    })
+  }
 
   function handleSave(e: React.FormEvent) {
     e.preventDefault()
@@ -52,13 +71,25 @@ export default function UserProfile({ profile, posts, currentUserId, isOwnProfil
           {profile.bio && <p className="profile-bio">{profile.bio}</p>}
           <div className="profile-stats">
             <span><strong>{formatCount(profile.hype_score)}</strong> hype score</span>
+            <span><strong>{formatCount(followerCount)}</strong> followers</span>
             <span><strong>{formatCount(posts.length)}</strong> posts</span>
           </div>
-          {isOwnProfile && !editing && (
-            <button className="btn-secondary" onClick={() => setEditing(true)}>
-              Edit Profile
-            </button>
-          )}
+          <div className="profile-actions">
+            {isOwnProfile && !editing && (
+              <button className="btn-secondary" onClick={() => setEditing(true)}>
+                Edit Profile
+              </button>
+            )}
+            {!isOwnProfile && currentUserId && (
+              <button
+                className={`follow-btn ${following ? 'follow-btn-following' : ''}`}
+                onClick={handleFollow}
+                disabled={isFollowPending}
+              >
+                {following ? 'Following' : 'Follow'}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
