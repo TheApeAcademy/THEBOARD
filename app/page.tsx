@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import BluebirdSVG from '@/components/BluebirdSVG'
 
 export default function LandingPage() {
@@ -53,64 +54,14 @@ export default function LandingPage() {
         </div>
 
         <div className="hero-visual">
-          <div className="mock-feed">
-            <div className="mock-post">
-              <div className="mock-post-header">
-                <div className="mock-avatar mock-avatar-purple" />
-                <div className="mock-meta">
-                  <span className="mock-name">sarah_builds</span>
-                  <span className="mock-handle">@sarah · 2m</span>
-                </div>
-                <span className="mock-signal-badge mock-badge-glitch">⚡ Glitch</span>
-              </div>
-              <p className="mock-post-body">The checkout flow breaks on iOS every single time I try to use Apple Pay. Three weeks, no fix, zero comms. @Acme you gotta do better 🧾</p>
-              <div className="mock-post-footer">
-                <span className="mock-drop-tag"># AcmeApp</span>
-                <div className="mock-votes">
-                  <span className="mock-vote mock-vote-up">▲ 847</span>
-                  <span className="mock-vote mock-vote-down">▼ 12</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mock-post mock-post-2">
-              <div className="mock-post-header">
-                <div className="mock-avatar mock-avatar-blue" />
-                <div className="mock-meta">
-                  <span className="mock-name">devdave</span>
-                  <span className="mock-handle">@devdave · 8m</span>
-                </div>
-                <span className="mock-signal-badge mock-badge-bigbrain">🧠 Big Brain</span>
-              </div>
-              <p className="mock-post-body">What if the dashboard had a dark mode that actually matched the brand? Not asking for much, the contrast is killing my eyes at 2am 👀</p>
-              <div className="mock-post-footer">
-                <span className="mock-drop-tag"># LinearFeedback</span>
-                <div className="mock-votes">
-                  <span className="mock-vote mock-vote-up">▲ 2.1k</span>
-                  <span className="mock-vote mock-vote-down">▼ 3</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="mock-post mock-post-3">
-              <div className="mock-post-header">
-                <div className="mock-avatar mock-avatar-green" />
-                <div className="mock-meta">
-                  <span className="mock-name">ux_maya</span>
-                  <span className="mock-handle">@ux_maya · 14m</span>
-                </div>
-                <span className="mock-signal-badge mock-badge-wishlist">🌈 Wishlist</span>
-              </div>
-              <p className="mock-post-body">Would love bulk export as CSV. Power users have been asking for years. This would be a massive W 🙌</p>
-              <div className="mock-post-footer">
-                <span className="mock-drop-tag"># NotionWishes</span>
-                <div className="mock-votes">
-                  <span className="mock-vote mock-vote-up">▲ 413</span>
-                  <span className="mock-vote mock-vote-down">▼ 5</span>
-                </div>
-              </div>
-            </div>
-          </div>
+          <Image
+            src="/c59a5eafb4306136f28ae20a1065883c.jpg"
+            alt="The Board — community product signals"
+            width={600}
+            height={500}
+            className="hero-visual-img"
+            priority
+          />
         </div>
       </section>
 
@@ -203,6 +154,15 @@ export default function LandingPage() {
               </ul>
               <Link href="/register?role=company" className="for-who-cta for-who-cta-company">Join as Company</Link>
             </div>
+          </div>
+          <div className="for-who-img-row">
+            <Image
+              src="/0031fd6225e0c7ca5c1ecc14f2a82d93.jpg"
+              alt="Real users, real signals on The Board"
+              width={1200}
+              height={400}
+              className="for-who-img"
+            />
           </div>
         </div>
       </section>

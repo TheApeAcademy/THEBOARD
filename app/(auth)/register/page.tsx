@@ -1,6 +1,7 @@
 'use client'
 
 import { Suspense, useState, useTransition } from 'react'
+import Image from 'next/image'
 import Link from 'next/link'
 import { useSearchParams } from 'next/navigation'
 import BluebirdSVG from '@/components/BluebirdSVG'
@@ -426,14 +427,28 @@ function RegisterFlow() {
 
 export default function RegisterPage() {
   return (
-    <Suspense fallback={
-      <div className="register-flow">
-        <div className="reg-step" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <BluebirdSVG size={40} />
+    <div className="auth-page">
+      <div className="auth-panel-image">
+        <Image
+          src="/601f6aba8b93dd4e41e8cc8a3bdfbfd0.jpg"
+          alt="The Board"
+          fill
+          style={{ objectFit: 'cover' }}
+        />
+        <div className="auth-panel-image-overlay">
+          <p className="auth-panel-image-quote">Real users. Real signals.<br />Zero PR spin.</p>
+          <p className="auth-panel-image-sub">Join the community building better products.</p>
         </div>
       </div>
-    }>
-      <RegisterFlow />
-    </Suspense>
+      <div className="auth-card-wrap" style={{ flex: 1 }}>
+        <Suspense fallback={
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh' }}>
+            <BluebirdSVG size={40} />
+          </div>
+        }>
+          <RegisterFlow />
+        </Suspense>
+      </div>
+    </div>
   )
 }

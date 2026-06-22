@@ -51,10 +51,21 @@ export const viewport: Viewport = {
   initialScale: 1,
 }
 
+const VIDEO_SRC = '/Black_grid_background_video___Motion_background_with_black_grid_video___Film_texture,_Motion_graphics_trends,_Motion_backgrounds.mp4'
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en" className={`${spaceGrotesk.variable} ${jetbrainsMono.variable} ${bebasNeue.variable}`}>
       <body>
+        <video
+          className="site-bg-video"
+          src={VIDEO_SRC}
+          autoPlay
+          muted
+          loop
+          playsInline
+          aria-hidden="true"
+        />
         <ServiceWorkerRegistrar />
         {children}
       </body>
